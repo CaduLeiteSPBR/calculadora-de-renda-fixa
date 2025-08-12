@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comparador de Renda Fixa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{--bg:#0b0d12;--card:#121722;--muted:#93a0b5;--text:#e8eefc;--accent:#4da3ff;--ok:#63d471;--warn:#ffd166}
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    h1{margin:0 0 16px;font-size:22px}
+    .grid{display:grid;gap:12px}
+.wrap {
+  display: grid;
+  grid-template-columns: 1fr; /* só uma coluna */
+  gap: 16px; /* mantém o espaçamento */
+}
+    @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid #1b2433;border-radius:14px;padding:16px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    /* Forçar alinhamento horizontal dos campos mesmo com labels de 1 ou 2 linhas */
+    .row3>div,.row4>div{display:flex;flex-direction:column}
+    .row3 label,.row4 label{min-height:32px;display:flex;align-items:flex-end} 
+    /* Alinhamento fino nos toggles */
+    .toggle label{display:inline;margin:0;font-size:14px;color:var(--text)}
+    .toggle input[type=checkbox]{width:18px;height:18px;align-self:center}
+    .toggle .badge{justify-self:end}
+    input,select{width:100%;background:#0f141d;border:1px solid #1f2a3c;border-radius:10px;color:var(--text);padding:10px 12px;font-size:14px}
+    .row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+    .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .row2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .row4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .title{font-weight:600;margin-bottom:10px}
+    .muted{color:var(--muted);font-size:12px}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:#0f141d;border:1px solid #22314a;border-radius:999px;padding:6px 10px;font-size:12px}
+    .toggle{display:grid;grid-template-columns:20px 1fr auto;align-items:center;gap:10px;margin:6px 0}
+    .btn{background:linear-gradient(180deg,#2a62ff,#204dd9);border:0;color:#fff;padding:12px 16px;border-radius:12px;font-weight:600;cursor:pointer}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px dashed #263043;text-align:right}
+    th:first-child,td:first-child{text-align:left}
+    tfoot td{font-weight:600}
+    .hint{font-size:12px;color:var(--muted)}
+    .badge{padding:2px 8px;border-radius:999px;background:#142034;border:1px solid #243759;color:#8fb4ff;font-size:12px}
+    .danger{color:#ff8b8b}
+  </style>
+</head>
+<body>
+  <h1>Comparador de Renda Fixa</h1>
+  <div class="wrap">
+    <div class="card">
+      <div class="title">Parâmetros-base</div>
+      <div class="row3">
+        <div>
+          <label>Valor da Aplicação (R$)</label>
+          <input id="valor" type="number" min="0" step="0.01" value="10000" />
+        </div>
+        <div>
+          <label>Data da Aplicação</label>
+          <input id="dataAplic" type="date" />
+        </div>
+        <div>
+          <label>Data do Resgate</label>
+          <input id="dataResg" type="date" />
+        </div>
+      </div>
+      <div class="row3" style="margin-top:10px">
+        <div>
+          <label>IPCA Atual (% a.a.)</label>
+          <input id="ipcaAA" type="number" step="0.01" value="5.23" />
+        </div>
+        <div>
+          <label>CDI Atual (% a.a.)</label>
+          <input id="cdiAA" type="number" step="0.01" value="12.55" />
+        </div>
+        <div>
+          <label>Selic Atual (% a.a.)</label>
+          <input id="selicAA" type="number" step="0.01" value="15.00" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title">Títulos a comparar</div>
+      <div class="grid">
+        <div class="toggle"><input type="checkbox" id="t_lci"/> <label for="t_lci">LCI/LCA Pós-Fixado</label> <span class="badge">Isento IR</span></div>
+        <div class="row3" id="box_lci" style="display:none">
+          <div>
+            <label>% do CDI</label>
+            <input id="lci_cdiPct" type="number" step="0.01" value="95"/>
+          </div>
+        </div>
+
+        <div class="toggle"><input type="checkbox" id="t_cdi"/> <label for="t_cdi">CDB Pós-Fixado (CDI)</label></div>
+        <div class="row3" id="box_cdi" style="display:none">
+          <div>
+            <label>% do CDI</label>
+            <input id="cdb_cdiPct" type="number" step="0.01" value="105"/>
+          </div>
+        </div>
+
+        <div class="toggle"><input type="checkbox" id="t_ipca_cdb"/> <label for="t_ipca_cdb">CDB Pós-Fixado (IPCA + Taxa)</label></div>
+        <div class="row3" id="box_ipca_cdb" style="display:none">
+          <div>
+            <label>Taxa Real (% a.a.)</label>
+            <input id="cdb_ipca_taxa" type="number" step="0.01" value="5.5"/>
+          </div>
+        </div>
+
+        <div class="toggle"><input type="checkbox" id="t_pref"/> <label for="t_pref">CDB Pré-Fixado</label></div>
+        <div class="row3" id="box_pref" style="display:none">
+          <div>
+            <label>Remuneração (% a.a.)</label>
+            <input id="cdb_pre_taxa" type="number" step="0.01" value="12.2"/>
+          </div>
+        </div>
+
+        <div class="toggle"><input type="checkbox" id="t_selic"/> <label for="t_selic">Tesouro Selic</label></div>
+        <div class="row3" id="box_selic" style="display:none">
+          <div>
+            <label>% da Taxa</label>
+            <input id="t_selic_pct" type="number" step="0.01" value="100"/>
+          </div>
+          <div>
+            <label>Selic Prevista no Resgate (% a.a.)</label>
+            <input id="t_selic_prev" type="number" step="0.01" value="10.00"/>
+          </div>
+          <div>
+            <label>Vencimento do Título</label>
+            <input id="t_selic_venc" type="date" />
+          </div>
+        </div>
+
+        <div class="toggle"><input type="checkbox" id="t_tips"/> <label for="t_tips">Tesouro IPCA+</label> <span class="badge">com Marcação a Mercado</span></div>
+        <div class="row4" id="box_tips" style="display:none">
+          <div>
+            <label>Taxa Real de Entrada (% a.a.)</label>
+            <input id="tips_real_in" type="number" step="0.01" value="5.8"/>
+          </div>
+          <div>
+            <label>Taxa Real Prevista no Resgate (% a.a.)</label>
+            <input id="tips_real_out" type="number" step="0.01" value="5.2"/>
+          </div>
+          <div>
+            <label>Vencimento do Título</label>
+            <input id="tips_venc" type="date" />
+          </div>
+          <div>
+            <label>% Ágio/Deságio sobre taxa (opcional)</label>
+            <input id="tips_pct" type="number" step="0.01" value="100"/>
+          </div>
+        </div>
+        <div class="hint">Para títulos com "Taxa Prevista no Resgate", a taxa evolui mês a mês (interpolação linear) entre a atual e a prevista.</div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+        <button id="btnCalcular" class="btn">Calcular e Comparar</button>
+        <span class="muted">Resultados consideram IR regressivo (sem IOF) e capitalização mensal equivalente.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title">Resultados</div>
+      <div id="resumo" class="muted" style="margin-bottom:10px"></div>
+      <div style="overflow:auto">
+        <table id="tbl"></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="title">Evolução mensal</div>
+    <canvas id="chart" height="110"></canvas>
+  </div>
+
+<script>
+  // ===== util =====
+  const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const PCT = v => (v*100).toFixed(2)+'%';
+  const parsePct = v => Number(v)/100; // 12.34 => 0.1234
+  const daysBetween = (a,b) => Math.max(1, Math.round((b - a) / (1000*60*60*24)));
+  const monthsBetween = (a,b) => {
+    let months = (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth());
+    // ensure at least 1
+    return Math.max(1, months + (b.getDate()>=a.getDate()?0: -1) + 1);
+  }
+  const aa_to_am = r => Math.pow(1+r,1/12)-1; // anual -> mensal eqv.
+  const linspace = (start, end, n) => Array.from({length:n}, (_,i)=> start + (end-start)*(i/(n-1||1)) );
+
+  function irRegressivo(dias){
+    if (dias<=180) return 0.225;
+    if (dias<=360) return 0.20;
+    if (dias<=720) return 0.175;
+    return 0.15;
+  }
+
+  function buildDates(start, end){
+    const arr=[]; const dt=new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    while (dt <= end){ arr.push(new Date(dt)); dt.setMonth(dt.getMonth()+1); }
+    if (+arr[arr.length-1] !== +end) arr[arr.length-1] = new Date(end); // ensure last == end
+    return arr;
+  }
+
+  // ===== modelos de cálculo por título =====
+  function serieLCI(valor, cdiAA, pctCDI, datas){
+    const cdiM = aa_to_am(cdiAA);
+    const k = pctCDI; // ex: 0.95
+    let v=valor; const points=[v];
+    for (let i=1;i<datas.length;i++){ v *= (1 + cdiM*k); points.push(v); }
+    return {name:`LCI/LCA ${Math.round(k*100)}% CDI`, points, isento:true};
+  }
+
+  function serieCDB_CDI(valor, cdiAA, pctCDI, datas){
+    const cdiM = aa_to_am(cdiAA);
+    const k = pctCDI;
+    let v=valor; const points=[v];
+    for (let i=1;i<datas.length;i++){ v *= (1 + cdiM*k); points.push(v); }
+    return {name:`CDB ${Math.round(k*100)}% CDI`, points, isento:false};
+  }
+
+  function serieCDB_IPCA(valor, ipcaAA, taxaRealAA, datas){
+    const ipcaM = aa_to_am(ipcaAA);
+    const realM = aa_to_am(taxaRealAA);
+    let v=valor; const points=[v];
+    for (let i=1;i<datas.length;i++){ v *= (1 + ipcaM) * (1 + realM); points.push(v); }
+    return {name:`CDB IPCA+${(taxaRealAA*100).toFixed(2)}% a.a.`, points, isento:false};
+  }
+
+  function serieCDB_Pre(valor, taxaAA, datas){
+    const m = aa_to_am(taxaAA);
+    let v=valor; const points=[v];
+    for (let i=1;i<datas.length;i++){ v *= (1 + m); points.push(v); }
+    return {name:`CDB Pré ${ (taxaAA*100).toFixed(2) }% a.a.`, points, isento:false};
+  }
+
+  function serieTesouroSelic(valor, selicAA_in, selicAA_out, pct, datas){
+    const months = datas.length;
+    const pathAA = linspace(selicAA_in, selicAA_out, months);
+    let v=valor; const points=[v];
+    for (let i=1;i<months;i++){
+      const m = aa_to_am(pathAA[i]);
+      v *= (1 + m * pct);
+      points.push(v);
+    }
+    return {name:`Tesouro Selic ${Math.round(pct*100)}%`, points, isento:false};
+  }
+
+  // Tesouro IPCA+ com marcação a mercado (aprox. zero cupom real)
+  function serieTesouroIPCA(valor, ipcaAA, real_in, real_out, vencDate, datas, pct=1.0){
+    const months = datas.length;
+    const ipcaM = aa_to_am(ipcaAA);
+    const realPathAA = linspace(real_in, real_out, months).map(x=>x*pct);
+
+    // preço teórico: P_t = I_t * (1+real_t)^(-T_t),
+    // onde I_t é fator de indexação acumulado até t (com defasagem ignorada) e T_t = anos restantes até vencimento
+    const maturity = new Date(vencDate);
+    const T0_years = (maturity - datas[0])/(365.25*24*3600*1000);
+
+    // fator de indexação mensal acumulado
+    let I=1; const Iseries=[I];
+    for (let i=1;i<months;i++){ I *= (1 + ipcaM); Iseries.push(I); }
+
+    const yearsLeft = datas.map(dt => Math.max(0.0001,(maturity - dt)/(365.25*24*3600*1000)) );
+    const price0 = Iseries[0] * Math.pow(1+realPathAA[0], -T0_years);
+    const units = valor / price0;
+
+    const points = datas.map((_,i)=> units * ( Iseries[i] * Math.pow(1+realPathAA[i], -yearsLeft[i]) ) );
+    return {name:`Tesouro IPCA+ (MM)`, points, isento:false};
+  }
+
+  // ===== UI glue =====
+  const qs = sel => document.querySelector(sel);
+  const toggleBox = (chk, boxId) => {
+    qs(chk).addEventListener('change', e=>{ qs(boxId).style.display = e.target.checked? 'grid':'none'; });
+  }
+  toggleBox('#t_lci', '#box_lci');
+  toggleBox('#t_cdi', '#box_cdi');
+  toggleBox('#t_ipca_cdb', '#box_ipca_cdb');
+  toggleBox('#t_pref', '#box_pref');
+  toggleBox('#t_selic', '#box_selic');
+  toggleBox('#t_tips', '#box_tips');
+
+  // datas padrão: hoje e +12 meses
+  const today = new Date();
+  const addMonths = (d,m)=>{ const t=new Date(d); t.setMonth(t.getMonth()+m); return t };
+  qs('#dataAplic').valueAsDate = today;
+  qs('#dataResg').valueAsDate = addMonths(today, 12);
+  qs('#t_selic_venc').valueAsDate = addMonths(today, 36);
+  qs('#tips_venc').valueAsDate = addMonths(today, 60);
+
+  let chart;
+
+  function calcular(){
+    const valor = Number(qs('#valor').value || 0);
+    const dtA = new Date(qs('#dataAplic').value);
+    const dtR = new Date(qs('#dataResg').value);
+    if (!(valor>0) || isNaN(dtA) || isNaN(dtR) || dtR<=dtA){
+      alert('Preencha valor e datas corretamente.');
+      return;
+    }
+
+    const dias = daysBetween(dtA, dtR);
+    const meses = monthsBetween(dtA, dtR);
+    const datas = buildDates(dtA, dtR);
+
+    const ipcaAA = parsePct(qs('#ipcaAA').value);
+    const cdiAA  = parsePct(qs('#cdiAA').value);
+    const selicAA= parsePct(qs('#selicAA').value);
+
+    const series=[];
+
+    if (qs('#t_lci').checked){
+      series.push( serieLCI(valor, cdiAA, parsePct(qs('#lci_cdiPct').value), datas) );
+    }
+    if (qs('#t_cdi').checked){
+      series.push( serieCDB_CDI(valor, cdiAA, parsePct(qs('#cdb_cdiPct').value), datas) );
+    }
+    if (qs('#t_ipca_cdb').checked){
+      series.push( serieCDB_IPCA(valor, ipcaAA, parsePct(qs('#cdb_ipca_taxa').value), datas) );
+    }
+    if (qs('#t_pref').checked){
+      series.push( serieCDB_Pre(valor, parsePct(qs('#cdb_pre_taxa').value), datas) );
+    }
+    if (qs('#t_selic').checked){
+      series.push( serieTesouroSelic(
+        valor,
+        selicAA,
+        parsePct(qs('#t_selic_prev').value),
+        parsePct(qs('#t_selic_pct').value),
+        datas
+      ));
+    }
+    if (qs('#t_tips').checked){
+      series.push( serieTesouroIPCA(
+        valor,
+        ipcaAA,
+        parsePct(qs('#tips_real_in').value),
+        parsePct(qs('#tips_real_out').value),
+        qs('#tips_venc').value,
+        datas,
+        parsePct(qs('#tips_pct').value||'100')
+      ));
+    }
+
+    if (series.length===0){ alert('Selecione pelo menos um título.'); return; }
+
+    // Tabela
+    const IR = irRegressivo(dias);
+    const head = `<tr><th>Título</th><th>Bruto</th><th>Rendimento</th><th>IR</th><th>Líquido</th><th>% no período</th><th>% a.a. (líq.)</th></tr>`;
+    const rows = series.map(s=>{
+      const bruto = s.points[s.points.length-1];
+      const rend  = bruto - valor;
+      const ir = s.isento? 0 : Math.max(0, rend*IR);
+      const liq = bruto - ir;
+      const anos = dias/365.25;
+      const tirl = Math.pow(liq/valor, 1/anos) - 1;
+      return `<tr><td>${s.name}</td><td>${BRL(bruto)}</td><td>${BRL(rend)}</td><td>${BRL(ir)}</td><td>${BRL(liq)}</td><td>${PCT(liq/valor-1)}</td><td>${PCT(tirl)}</td></tr>`
+    }).join('');
+    const tbl = qs('#tbl');
+    tbl.innerHTML = head + rows;
+
+    qs('#resumo').innerHTML = `Período: <span class="pill">${dtA.toLocaleDateString()} → ${dtR.toLocaleDateString()}</span> · ${dias} dias · ${series.length} título(s)`;
+
+    // Gráfico
+    const labels = datas.map(d=> d.toLocaleDateString('pt-BR', {month:'2-digit', year:'2-digit'}) );
+    const datasets = series.map((s,idx)=>({
+      label: s.name,
+      data: s.points.map(v=>Math.round(v)),
+      borderWidth: 2,
+      fill:false
+    }));
+
+    if (chart) chart.destroy();
+    const ctx = document.getElementById('chart').getContext('2d');
+    chart = new Chart(ctx, {
+      type:'line',
+      data:{ labels, datasets },
+      options:{
+        responsive:true,
+        interaction:{mode:'index', intersect:false},
+        plugins:{ legend:{position:'bottom', labels:{color:'#c9d7f2'}}, tooltip:{callbacks:{label:(ctx)=> BRL(ctx.parsed.y)} } },
+        scales:{ x:{ ticks:{color:'#9fb0d0'}}, y:{ ticks:{color:'#9fb0d0'}, beginAtZero:false} }
+      }
+    });
+  }
+
+  document.getElementById('btnCalcular').addEventListener('click', calcular);
+</script>
+</body>
+</html>
